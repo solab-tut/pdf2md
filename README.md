@@ -115,7 +115,7 @@ Copy `.env.example` to `.env` and adjust as needed:
 
 ```bash
 # Local LLM
-OLLAMA_URL=http://host.docker.external:11434  # Ollama endpoint (external instance)
+OLLAMA_URL=http://host.docker.internal:11434  # Ollama endpoint (external instance)
 PDF2MD_MODEL=qwen2.5vl:32b                    # Default model
 
 # Image processing
