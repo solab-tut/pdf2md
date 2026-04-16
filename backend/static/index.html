@@ -87,6 +87,7 @@
       transition: transform 0.2s;
     }
     .toggle input:checked + .toggle-track::after { transform: translateX(0.875rem); }
+    .toggle.disabled { opacity: 0.4; pointer-events: none; }
 
     .seg {
       display: inline-flex;
@@ -127,14 +128,29 @@
       margin-left: 0.5rem;
     }
     .btn-download:hover { background: #15803d; }
+    .btn-cancel {
+      background: #334155;
+      color: #64748b;
+      margin-left: 0.75rem;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+    .btn-cancel.active { background: #dc2626; color: #fff; }
+    .btn-cancel.active:hover { background: #b91c1c; }
 
     .progress {
       margin-top: 1rem;
       font-size: 0.8rem;
       color: #94a3b8;
     }
-    .progress-bar {
+    .progress-row {
+      display: flex;
+      align-items: center;
       margin-top: 0.5rem;
+    }
+    .progress-bar {
+      flex: 1;
       height: 4px;
       background: #334155;
       border-radius: 2px;
@@ -590,7 +606,10 @@
       </div>
       <div class="progress" id="progress" style="display:none">
         <span id="progress-text">Processing...</span>
-        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="progress-row">
+          <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+          <button class="btn btn-cancel" id="cancel-btn" type="button" onclick="cancelConvert()">Cancel</button>
+        </div>
       </div>
     </div>
 
@@ -673,6 +692,7 @@
     let resultAssetUrls = new Map();
     let pageAssets = [];
     let outputMode = 'preview';
+    let convertAbort = null;
 
     function b64ToBytes(b64) {
       const bin = atob(b64);
@@ -1138,6 +1158,23 @@
     }
     loadModels();
 
+    // Auto-toggle "Also save as image" when "All as image" is selected
+    document.querySelectorAll('input[name="tables"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        const cb = document.getElementById('table-also-image');
+        const toggle = cb.closest('.toggle');
+        if (radio.value === 'all' && radio.checked) {
+          cb.checked = true;
+          cb.disabled = true;
+          toggle.classList.add('disabled');
+        } else {
+          cb.checked = false;
+          cb.disabled = false;
+          toggle.classList.remove('disabled');
+        }
+      });
+    });
+
     async function startConvert() {
       const fileInput = document.getElementById('pdf-file');
       const file = fileInput.files[0];
@@ -1160,6 +1197,7 @@
       const output = document.getElementById('output');
 
       btn.disabled = true;
+      document.getElementById('cancel-btn').classList.add('active');
       progress.style.display = 'block';
       output.style.display = 'none';
       progressFill.style.width = '0%';
@@ -1184,17 +1222,19 @@
       formData.append('table_also_image', tableAlsoImage);
       if (pages) formData.append('pages', pages);
 
+      let pageResults = [];
+      convertAbort = new AbortController();
       try {
         const res = await fetch(apiUrl('/api/pdf2md/convert'), {
           method: 'POST',
           body: formData,
+          signal: convertAbort.signal,
         });
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
         let totalPages = 0;
-        let pageResults = [];
 
         while (true) {
           const { done, value } = await reader.read();
@@ -1252,10 +1292,26 @@
         renderResult();
         output.style.display = 'block';
       } catch (e) {
-        progressText.textContent = 'Error: ' + e.message;
+        if (e.name === 'AbortError') {
+          progressText.textContent = 'Cancelled.';
+          if (pageResults.length) {
+            const separator = '\n\n---\n\n';
+            resultText = pageResults.map(p => p.content).join(separator);
+            renderResult();
+            output.style.display = 'block';
+          }
+        } else {
+          progressText.textContent = 'Error: ' + e.message;
+        }
       } finally {
+        convertAbort = null;
         btn.disabled = false;
+        document.getElementById('cancel-btn').classList.remove('active');
       }
+    }
+
+    function cancelConvert() {
+      if (convertAbort) convertAbort.abort();
     }
 
     function copyResult() {
