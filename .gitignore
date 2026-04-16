@@ -1,0 +1,5 @@
+ollama-data/
+.env
+__pycache__/
+*.pyc
+.claude/

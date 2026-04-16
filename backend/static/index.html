@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF2MD Converter</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; font-weight: 600; color: #f8fafc; margin-bottom: 0.5rem; }
+    .form-section {
+      margin-top: 1.5rem;
+      padding: 1.25rem;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 0.5rem;
+    }
+    .form-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .form-row:last-child { margin-bottom: 0; }
+    label {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      min-width: 4rem;
+    }
+    select, input[type="file"], input[type="text"] {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      border-radius: 0.375rem;
+      padding: 0.5rem;
+      font-size: 0.8rem;
+    }
+    select:focus, input[type="text"]:focus { outline: 1px solid #60a5fa; }
+    input[type="file"] { flex: 1; }
+    input[type="file"]::file-selector-button {
+      background: #334155;
+      color: #e2e8f0;
+      border: none;
+      border-radius: 0.25rem;
+      padding: 0.375rem 0.75rem;
+      cursor: pointer;
+      margin-right: 0.5rem;
+    }
+    input[type="text"] { width: 7rem; }
+    input[type="text"].wide { width: auto; flex: 1; min-width: 5rem; }
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      user-select: none;
+    }
+    .toggle input { display: none; }
+    .toggle-track {
+      width: 2rem;
+      height: 1.125rem;
+      background: #334155;
+      border-radius: 0.5625rem;
+      position: relative;
+      transition: background 0.2s;
+    }
+    .toggle input:checked + .toggle-track { background: #2563eb; }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 0.875rem; height: 0.875rem;
+      background: #e2e8f0;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle input:checked + .toggle-track::after { transform: translateX(0.875rem); }
+
+    .seg {
+      display: inline-flex;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 0.375rem;
+      overflow: hidden;
+    }
+    .seg input { display: none; }
+    .seg label {
+      min-width: 0;
+      padding: 0.375rem 0.625rem;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      cursor: pointer;
+      border-right: 1px solid #334155;
+      user-select: none;
+    }
+    .seg label:last-of-type { border-right: none; }
+    .seg input:checked + label {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 0.375rem;
+      padding: 0.5rem 1.5rem;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .btn-download {
+      background: #16a34a;
+      margin-left: 0.5rem;
+    }
+    .btn-download:hover { background: #15803d; }
+
+    .progress {
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+    .progress-bar {
+      margin-top: 0.5rem;
+      height: 4px;
+      background: #334155;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #60a5fa;
+      transition: width 0.3s;
+      width: 0%;
+    }
+
+    .output {
+      margin-top: 1.5rem;
+      padding: 1.25rem;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 0.5rem;
+      display: none;
+    }
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .output-header h2 {
+      font-size: 1rem;
+      color: #f8fafc;
+    }
+    .output-tools {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .view-switch {
+      display: inline-flex;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 0.375rem;
+      overflow: hidden;
+    }
+    .view-btn {
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      padding: 0.45rem 0.75rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .view-btn + .view-btn {
+      border-left: 1px solid #334155;
+    }
+    .view-btn.active {
+      background: #2563eb;
+      color: #fff;
+    }
+    .output-body[data-mode="preview"] .output-source { display: none; }
+    .output-body[data-mode="source"] .output-preview { display: none; }
+
+    .pages-section {
+      margin-top: 1.5rem;
+      padding: 1.25rem;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 0.5rem;
+      display: none;
+    }
+    .pages-section.visible { display: block; }
+    .pages-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.75rem;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .pages-header h2 { font-size: 1rem; color: #f8fafc; }
+    .pages-hint { font-size: 0.75rem; color: #94a3b8; }
+    .pages-strip {
+      display: flex;
+      gap: 0.75rem;
+      overflow-x: auto;
+      padding: 0.25rem 0.25rem 0.5rem;
+    }
+    .page-thumb {
+      flex: 0 0 auto;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 0.375rem;
+      padding: 0.375rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.375rem;
+    }
+    .page-thumb img {
+      display: block;
+      max-height: 220px;
+      max-width: 180px;
+      width: auto;
+      height: auto;
+      border-radius: 0.25rem;
+      background: #fff;
+    }
+    .page-thumb-label {
+      font-size: 0.72rem;
+      color: #94a3b8;
+    }
+    .page-thumb { position: relative; cursor: pointer; transition: border-color 0.15s; }
+    .page-thumb:hover { border-color: #60a5fa; }
+    .page-thumb-crop {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: rgba(15, 23, 42, 0.85);
+      color: #e2e8f0;
+      border: 1px solid #475569;
+      border-radius: 0.25rem;
+      padding: 0.15rem 0.4rem;
+      font-size: 0.72rem;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .page-thumb:hover .page-thumb-crop { opacity: 1; }
+    .page-thumb-crop:hover { background: #2563eb; border-color: #60a5fa; color: #fff; }
+
+    .preview-img-wrap {
+      position: relative;
+      display: inline-block;
+      max-width: 100%;
+    }
+    .preview-img-wrap img { margin: 1rem auto; }
+    .preview-crop-btn {
+      position: absolute;
+      top: 1rem;
+      right: 6px;
+      background: rgba(15, 23, 42, 0.85);
+      color: #e2e8f0;
+      border: 1px solid #475569;
+      border-radius: 0.25rem;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.72rem;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .preview-img-wrap:hover .preview-crop-btn { opacity: 1; }
+    .preview-crop-btn:hover { background: #2563eb; border-color: #60a5fa; color: #fff; }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.82);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 2rem;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal-panel {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 0.5rem;
+      max-width: 100%;
+      max-height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 1rem;
+      overflow: hidden;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1rem;
+    }
+    .modal-header h3 { font-size: 1rem; color: #f8fafc; }
+    .modal-header .modal-mode { font-size: 0.75rem; color: #94a3b8; }
+    .modal-body {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      overflow: hidden;
+    }
+    .modal-canvas-wrap {
+      position: relative;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 0.375rem;
+      overflow: auto;
+      max-width: calc(100vw - 22rem);
+      max-height: calc(100vh - 10rem);
+    }
+    .modal-canvas-wrap canvas {
+      display: block;
+      cursor: crosshair;
+      background: #fff;
+    }
+    .modal-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      min-width: 16rem;
+      font-size: 0.8rem;
+      color: #cbd5e1;
+    }
+    .modal-sidebar .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .modal-sidebar .field-label {
+      font-size: 0.72rem;
+      color: #94a3b8;
+    }
+    .modal-sidebar .seg { display: inline-flex; }
+    .modal-sidebar .rect-info {
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.72rem;
+      color: #94a3b8;
+    }
+    .modal-footer {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+    .modal-footer .btn-secondary {
+      background: #334155;
+    }
+    .modal-footer .btn-secondary:hover { background: #475569; }
+    .output-content {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 0.375rem;
+      padding: 1rem;
+      max-height: 60vh;
+      overflow: auto;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      font-family: 'Consolas', 'Monaco', monospace;
+    }
+    .output-source {
+      margin: 0;
+      resize: vertical;
+      min-height: 20vh;
+      max-height: 80vh;
+      width: 100%;
+      color: #e2e8f0;
+    }
+    textarea.output-source:focus { outline: 1px solid #60a5fa; }
+    .output-preview {
+      white-space: normal;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 0.92rem;
+      line-height: 1.7;
+    }
+    .output-preview > *:first-child { margin-top: 0; }
+    .output-preview > *:last-child { margin-bottom: 0; }
+    .output-preview h1,
+    .output-preview h2,
+    .output-preview h3,
+    .output-preview h4,
+    .output-preview h5,
+    .output-preview h6 {
+      color: #f8fafc;
+      line-height: 1.25;
+      margin: 1.2em 0 0.55em;
+    }
+    .output-preview p,
+    .output-preview ul,
+    .output-preview ol,
+    .output-preview blockquote,
+    .output-preview pre,
+    .output-preview table,
+    .output-preview hr {
+      margin: 0.9rem 0;
+    }
+    .output-preview ul,
+    .output-preview ol {
+      padding-left: 1.4rem;
+    }
+    .output-preview li + li {
+      margin-top: 0.35rem;
+    }
+    .output-preview a {
+      color: #7dd3fc;
+    }
+    .output-preview code {
+      background: rgba(148, 163, 184, 0.15);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 0.25rem;
+      padding: 0.08rem 0.3rem;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.88em;
+    }
+    .output-preview pre {
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 0.5rem;
+      padding: 0.9rem 1rem;
+      overflow: auto;
+    }
+    .output-preview pre code {
+      background: transparent;
+      border: none;
+      padding: 0;
+      font-size: 0.82rem;
+      white-space: pre;
+      display: block;
+    }
+    .output-preview blockquote {
+      border-left: 3px solid #38bdf8;
+      padding-left: 0.9rem;
+      color: #cbd5e1;
+    }
+    .output-preview hr {
+      border: none;
+      border-top: 1px solid #334155;
+    }
+    .output-preview img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin: 1rem auto;
+      border-radius: 0.5rem;
+      border: 1px solid #334155;
+      background: #020617;
+    }
+    .output-preview table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 0.5rem;
+      border: 1px solid #334155;
+    }
+    .output-preview th,
+    .output-preview td {
+      border-bottom: 1px solid #334155;
+      padding: 0.55rem 0.7rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    .output-preview th {
+      background: rgba(37, 99, 235, 0.16);
+      color: #f8fafc;
+    }
+    .output-preview tr:last-child td {
+      border-bottom: none;
+    }
+    .output-preview .math-block {
+      margin: 1rem 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .output-preview .math-inline {
+      display: inline-block;
+    }
+    .preview-missing-asset {
+      display: inline-block;
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.25rem;
+      background: rgba(248, 113, 113, 0.12);
+      color: #fca5a5;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.86em;
+    }
+    .preview-empty {
+      color: #64748b;
+    }
+    .hint {
+      font-size: 0.7rem;
+      color: #64748b;
+      margin-left: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>PDF to Markdown</h1>
+
+    <div class="form-section">
+      <div class="form-row">
+        <label>File</label>
+        <input type="file" id="pdf-file" accept=".pdf">
+      </div>
+      <div class="form-row">
+        <label>Reload</label>
+        <input type="file" id="zip-file" accept=".zip" onchange="loadZip(event)">
+        <span class="hint">過去に Download した ZIP を読み込んで再編集</span>
+      </div>
+      <div class="form-row">
+        <label>Lang</label>
+        <select id="lang">
+          <option value="ja" selected>Japanese</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Model</label>
+        <select id="model"></select>
+      </div>
+      <div class="form-row">
+        <label>Pages</label>
+        <input type="text" id="pages" class="wide" placeholder="All (e.g. 1-3,5,8)">
+        <label>DPI</label>
+        <select id="dpi">
+          <option value="150" selected>150 (default)</option>
+          <option value="200">200 (high)</option>
+          <option value="300">300 (high)</option>
+        </select>
+        <label class="toggle">
+          <input type="checkbox" id="thinking">
+          <span class="toggle-track"></span>
+          Thinking
+        </label>
+      </div>
+      <div class="form-row">
+        <label>Figures</label>
+        <div class="seg" id="seg-figures">
+          <input type="radio" name="figures" id="fig-off" value="off" checked>
+          <label for="fig-off">MD only</label>
+          <input type="radio" name="figures" id="fig-on" value="on">
+          <label for="fig-on">Extract as image</label>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Tables</label>
+        <div class="seg" id="seg-tables">
+          <input type="radio" name="tables" id="tbl-md" value="md" checked>
+          <label for="tbl-md">MD only</label>
+          <input type="radio" name="tables" id="tbl-complex" value="complex">
+          <label for="tbl-complex">Complex as image</label>
+          <input type="radio" name="tables" id="tbl-all" value="all">
+          <label for="tbl-all">All as image</label>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="table-also-image">
+          <span class="toggle-track"></span>
+          Also save as image
+        </label>
+      </div>
+      <div class="form-row">
+        <button class="btn" id="convert-btn" onclick="startConvert()">Convert</button>
+      </div>
+      <div class="progress" id="progress" style="display:none">
+        <span id="progress-text">Processing...</span>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+    </div>
+
+    <div class="output" id="output">
+      <div class="output-header">
+        <h2>Result</h2>
+        <div class="output-tools">
+          <div class="view-switch" aria-label="Result view switch">
+            <button class="view-btn" id="view-source" type="button" onclick="setOutputMode('source')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> Markdown</button>
+            <button class="view-btn active" id="view-preview" type="button" onclick="setOutputMode('preview')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Preview</button>
+          </div>
+          <button class="btn" onclick="copyResult()">Copy</button>
+          <button class="btn btn-download" onclick="downloadResult()">Download</button>
+        </div>
+      </div>
+      <div class="output-body" id="output-body" data-mode="preview">
+        <textarea class="output-content output-source" id="output-source" spellcheck="false" oninput="onSourceInput()"></textarea>
+        <div class="output-content output-preview" id="output-preview"></div>
+      </div>
+    </div>
+
+    <div class="pages-section" id="pages-section">
+      <div class="pages-header">
+        <h2>Pages</h2>
+        <div class="pages-hint">ページをクリックして手動で切り出し</div>
+      </div>
+      <div class="pages-strip" id="pages-strip"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="crop-modal" role="dialog" aria-modal="true">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3>手動切り出し</h3>
+        <span class="modal-mode" id="crop-mode-label"></span>
+      </div>
+      <div class="modal-body">
+        <div class="modal-canvas-wrap">
+          <canvas id="crop-canvas"></canvas>
+        </div>
+        <div class="modal-sidebar">
+          <div class="field" id="crop-kind-field">
+            <span class="field-label">種類</span>
+            <div class="seg">
+              <input type="radio" name="crop-kind" id="crop-kind-figure" value="figure" checked>
+              <label for="crop-kind-figure">Figure</label>
+              <input type="radio" name="crop-kind" id="crop-kind-table" value="table">
+              <label for="crop-kind-table">Table</label>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">キャプション（任意）</span>
+            <input type="text" id="crop-caption" class="wide" placeholder="例: Fig. 1 概要図">
+          </div>
+          <div class="field">
+            <span class="field-label">ファイル名</span>
+            <input type="text" id="crop-filename" class="wide" readonly>
+          </div>
+          <div class="field">
+            <span class="field-label">選択範囲（原寸 px）</span>
+            <div class="rect-info" id="crop-rect-info">未選択</div>
+          </div>
+          <div class="field">
+            <span class="field-label">ヒント</span>
+            <div class="rect-info">ドラッグで矩形選択。矩形上をクリックしてやり直し可</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeCropModal()">キャンセル</button>
+        <button type="button" class="btn" id="crop-save-btn" onclick="performCrop()" disabled>切り出して保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script>
+    let resultText = '';
+    let resultAssets = new Map();
+    let resultAssetUrls = new Map();
+    let pageAssets = [];
+    let outputMode = 'preview';
+
+    function b64ToBytes(b64) {
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    }
+
+    function apiUrl(path) { return path; }
+
+    function revokeAssetUrls() {
+      for (const url of resultAssetUrls.values()) URL.revokeObjectURL(url);
+      resultAssetUrls = new Map();
+    }
+
+    function revokeAssetUrl(filename) {
+      const url = resultAssetUrls.get(filename);
+      if (url) {
+        URL.revokeObjectURL(url);
+        resultAssetUrls.delete(filename);
+      }
+    }
+
+    function filenameForBlobUrl(url) {
+      for (const [fn, u] of resultAssetUrls) if (u === url) return fn;
+      return null;
+    }
+
+    function setOutputMode(mode) {
+      outputMode = mode === 'source' ? 'source' : 'preview';
+      const outputBody = document.getElementById('output-body');
+      const previewBtn = document.getElementById('view-preview');
+      const sourceBtn = document.getElementById('view-source');
+      outputBody.dataset.mode = outputMode;
+      previewBtn.classList.toggle('active', outputMode === 'preview');
+      sourceBtn.classList.toggle('active', outputMode === 'source');
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function sanitizeUrl(url) {
+      const value = (url || '').trim();
+      if (!value) return '';
+      if (value.startsWith('#')) return value;
+      if (/^(https?:|mailto:)/i.test(value)) return value;
+      if (/^(?:\/|\.{1,2}\/|assets\/)/.test(value)) return value;
+      return '';
+    }
+
+    function inferMimeType(filename) {
+      const lower = filename.toLowerCase();
+      if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+      if (lower.endsWith('.gif')) return 'image/gif';
+      if (lower.endsWith('.webp')) return 'image/webp';
+      if (lower.endsWith('.svg')) return 'image/svg+xml';
+      return 'image/png';
+    }
+
+    function getAssetPreviewUrl(path) {
+      const normalized = (path || '').trim().replace(/^\.?\//, '');
+      const match = normalized.match(/^assets\/(.+)$/);
+      if (!match) return '';
+      const filename = match[1];
+      const bytes = resultAssets.get(filename);
+      if (!bytes) return '';
+      if (!resultAssetUrls.has(filename)) {
+        const blob = new Blob([bytes], { type: inferMimeType(filename) });
+        resultAssetUrls.set(filename, URL.createObjectURL(blob));
+      }
+      return resultAssetUrls.get(filename);
+    }
+
+    function makeTokenStore() {
+      const tokens = [];
+      return {
+        put(html) {
+          const idx = tokens.length;
+          tokens.push(html);
+          return `@@MDTOKEN${idx}@@`;
+        },
+        resolve(html) {
+          return html.replace(/@@MDTOKEN(\d+)@@/g, (_, idx) => tokens[Number(idx)] || '');
+        },
+      };
+    }
+
+    function renderInline(text) {
+      const tokenStore = makeTokenStore();
+      let html = escapeHtml(text);
+
+      html = html.replace(/`([^`]+)`/g, (_, code) => tokenStore.put(`<code>${code}</code>`));
+      html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => {
+        const src = getAssetPreviewUrl(url) || sanitizeUrl(url);
+        if (!src) {
+          return tokenStore.put(`<span class="preview-missing-asset">[image: ${alt || url}]</span>`);
+        }
+        return tokenStore.put(`<img src="${escapeHtml(src)}" alt="${alt}" loading="lazy">`);
+      });
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
+        const href = sanitizeUrl(url);
+        if (!href) return label;
+        const isExternal = /^https?:/i.test(href);
+        const attrs = isExternal ? ' target="_blank" rel="noreferrer noopener"' : '';
+        return tokenStore.put(`<a href="${escapeHtml(href)}"${attrs}>${label}</a>`);
+      });
+      html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+      html = html.replace(/(^|[^\*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+      html = html.replace(/(^|[^_])_([^_\n]+)_(?!_)/g, '$1<em>$2</em>');
+      html = html.replace(/ {2}\n/g, '<br>\n');
+      return tokenStore.resolve(html);
+    }
+
+    function splitTableRow(line) {
+      let value = line.trim();
+      if (value.startsWith('|')) value = value.slice(1);
+      if (value.endsWith('|')) value = value.slice(0, -1);
+      return value.split('|').map(cell => cell.trim());
+    }
+
+    function isTableSeparator(line) {
+      const cells = splitTableRow(line);
+      return cells.length > 0 && cells.every(cell => /^:?-{3,}:?$/.test(cell));
+    }
+
+    function isBlank(line) {
+      return !line.trim();
+    }
+
+    function isFence(line) {
+      return /^\s*```/.test(line);
+    }
+
+    function isHeading(line) {
+      return /^\s{0,3}#{1,6}\s+/.test(line);
+    }
+
+    function isHr(line) {
+      return /^\s{0,3}(?:[-*_]\s*){3,}$/.test(line);
+    }
+
+    function isBlockquote(line) {
+      return /^\s*>\s?/.test(line);
+    }
+
+    function isListItem(line) {
+      return /^\s*(?:[-*+]|\d+\.)\s+/.test(line);
+    }
+
+    function isTableStart(lines, idx) {
+      return idx + 1 < lines.length && /\|/.test(lines[idx]) && isTableSeparator(lines[idx + 1]);
+    }
+
+    function renderParagraph(lines) {
+      return `<p>${renderInline(lines.join('\n')).replace(/\n/g, '<br>')}</p>`;
+    }
+
+    function renderList(lines) {
+      const ordered = /^\s*\d+\.\s+/.test(lines[0]);
+      const tag = ordered ? 'ol' : 'ul';
+      const items = lines.map(line => line.replace(/^\s*(?:[-*+]|\d+\.)\s+/, ''));
+      return `<${tag}>${items.map(item => `<li>${renderInline(item)}</li>`).join('')}</${tag}>`;
+    }
+
+    function renderBlockquote(lines) {
+      const body = lines
+        .map(line => line.replace(/^\s*>\s?/, ''))
+        .join('\n');
+      return `<blockquote>${renderParagraph(body.split('\n'))}</blockquote>`;
+    }
+
+    function renderCodeBlock(lines) {
+      return `<pre><code>${escapeHtml(lines.join('\n'))}</code></pre>`;
+    }
+
+    function renderTable(lines) {
+      const headers = splitTableRow(lines[0]);
+      const body = lines.slice(2);
+      const thead = `<thead><tr>${headers.map(cell => `<th>${renderInline(cell)}</th>`).join('')}</tr></thead>`;
+      const tbody = body.length
+        ? `<tbody>${body.map(line => {
+            const cells = splitTableRow(line);
+            return `<tr>${cells.map(cell => `<td>${renderInline(cell)}</td>`).join('')}</tr>`;
+          }).join('')}</tbody>`
+        : '';
+      return `<table>${thead}${tbody}</table>`;
+    }
+
+    let mathStore = [];
+
+    function preprocessMath(text) {
+      mathStore = [];
+      const codeStore = [];
+      let t = text.replace(/```[\s\S]*?```/g, (m) => {
+        const i = codeStore.push(m) - 1;
+        return `\n\nCODEGUARD${i}ENDGUARD\n\n`;
+      });
+      t = t.replace(/`[^`\n]+`/g, (m) => {
+        const i = codeStore.push(m) - 1;
+        return `CODEGUARD${i}ENDGUARD`;
+      });
+      t = t.replace(/\$\$([\s\S]+?)\$\$/g, (_, body) => {
+        const i = mathStore.push({ display: true, body: body.trim() }) - 1;
+        return `\n\nMATHTOKEN${i}ENDMATH\n\n`;
+      });
+      t = t.replace(/(^|[^\\])\$([^\$\n]+?)\$/g, (_, pre, body) => {
+        const i = mathStore.push({ display: false, body: body.trim() }) - 1;
+        return `${pre}MATHTOKEN${i}ENDMATH`;
+      });
+      t = t.replace(/CODEGUARD(\d+)ENDGUARD/g, (_, idx) => codeStore[parseInt(idx, 10)]);
+      return t;
+    }
+
+    function postprocessMath(container) {
+      if (!mathStore.length) return;
+      if (typeof katex === 'undefined') return;
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      let n;
+      while ((n = walker.nextNode())) nodes.push(n);
+      for (const node of nodes) {
+        const txt = node.textContent;
+        if (!/MATHTOKEN\d+ENDMATH/.test(txt)) continue;
+        if (node.parentNode && node.parentNode.closest('pre, code')) continue;
+        const parts = txt.split(/MATHTOKEN(\d+)ENDMATH/);
+        const frag = document.createDocumentFragment();
+        for (let k = 0; k < parts.length; k++) {
+          if (k % 2 === 0) {
+            if (parts[k]) frag.appendChild(document.createTextNode(parts[k]));
+          } else {
+            const item = mathStore[parseInt(parts[k], 10)];
+            if (!item) continue;
+            const span = document.createElement(item.display ? 'div' : 'span');
+            span.className = item.display ? 'math-block' : 'math-inline';
+            try {
+              katex.render(item.body, span, {
+                displayMode: item.display,
+                throwOnError: false,
+                output: 'html',
+              });
+            } catch (e) {
+              span.textContent = (item.display ? '$$' : '$') + item.body + (item.display ? '$$' : '$');
+            }
+            frag.appendChild(span);
+          }
+        }
+        if (node.parentNode) node.parentNode.replaceChild(frag, node);
+      }
+    }
+
+    function renderMarkdownPreview(markdown) {
+      const raw = (markdown || '').replace(/\r\n?/g, '\n');
+      if (!raw.trim()) { mathStore = []; return '<p class="preview-empty">No content yet.</p>'; }
+      const text = preprocessMath(raw);
+
+      const lines = text.split('\n');
+      const blocks = [];
+
+      for (let i = 0; i < lines.length; ) {
+        const line = lines[i];
+
+        if (isBlank(line)) {
+          i += 1;
+          continue;
+        }
+
+        if (isFence(line)) {
+          const fence = line.match(/^\s*```(.*)$/);
+          const codeLines = [];
+          i += 1;
+          while (i < lines.length && !isFence(lines[i])) {
+            codeLines.push(lines[i]);
+            i += 1;
+          }
+          if (i < lines.length) i += 1;
+          blocks.push(renderCodeBlock(codeLines, fence ? fence[1].trim() : ''));
+          continue;
+        }
+
+        if (isHeading(line)) {
+          const m = line.match(/^\s{0,3}(#{1,6})\s+(.*)$/);
+          const level = m[1].length;
+          blocks.push(`<h${level}>${renderInline(m[2].trim())}</h${level}>`);
+          i += 1;
+          continue;
+        }
+
+        if (isHr(line)) {
+          blocks.push('<hr>');
+          i += 1;
+          continue;
+        }
+
+        if (isTableStart(lines, i)) {
+          const tableLines = [lines[i], lines[i + 1]];
+          i += 2;
+          while (i < lines.length && /\|/.test(lines[i]) && !isBlank(lines[i])) {
+            tableLines.push(lines[i]);
+            i += 1;
+          }
+          blocks.push(renderTable(tableLines));
+          continue;
+        }
+
+        if (isBlockquote(line)) {
+          const quoteLines = [];
+          while (i < lines.length && isBlockquote(lines[i])) {
+            quoteLines.push(lines[i]);
+            i += 1;
+          }
+          blocks.push(renderBlockquote(quoteLines));
+          continue;
+        }
+
+        if (isListItem(line)) {
+          const listLines = [];
+          while (i < lines.length && isListItem(lines[i])) {
+            listLines.push(lines[i]);
+            i += 1;
+          }
+          blocks.push(renderList(listLines));
+          continue;
+        }
+
+        const paragraphLines = [];
+        while (
+          i < lines.length &&
+          !isBlank(lines[i]) &&
+          !isFence(lines[i]) &&
+          !isHeading(lines[i]) &&
+          !isHr(lines[i]) &&
+          !isBlockquote(lines[i]) &&
+          !isListItem(lines[i]) &&
+          !isTableStart(lines, i)
+        ) {
+          paragraphLines.push(lines[i]);
+          i += 1;
+        }
+        blocks.push(renderParagraph(paragraphLines));
+      }
+
+      return blocks.join('');
+    }
+
+    function renderPreviewOnly() {
+      const outputPreview = document.getElementById('output-preview');
+      outputPreview.innerHTML = renderMarkdownPreview(resultText);
+      postprocessMath(outputPreview);
+      attachCropButtonsToPreview();
+    }
+
+    function renderResult() {
+      const outputSource = document.getElementById('output-source');
+      outputSource.value = resultText;
+      renderPreviewOnly();
+    }
+
+    let sourceInputTimer = null;
+    function onSourceInput() {
+      const outputSource = document.getElementById('output-source');
+      resultText = outputSource.value;
+      if (sourceInputTimer) clearTimeout(sourceInputTimer);
+      sourceInputTimer = setTimeout(() => {
+        renderPreviewOnly();
+        sourceInputTimer = null;
+      }, 250);
+    }
+
+    function attachCropButtonsToPreview() {
+      const container = document.getElementById('output-preview');
+      container.querySelectorAll('img').forEach(img => {
+        if (img.closest('.preview-img-wrap')) return;
+        const filename = filenameForBlobUrl(img.getAttribute('src') || '');
+        if (!filename) return;
+        if (filename.endsWith('-page.jpg')) return;
+        const m = filename.match(/^p(\d+)-/);
+        if (!m) return;
+        const pageNum = parseInt(m[1], 10);
+        const wrap = document.createElement('span');
+        wrap.className = 'preview-img-wrap';
+        img.parentNode.insertBefore(wrap, img);
+        wrap.appendChild(img);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'preview-crop-btn';
+        btn.textContent = '✂ 切り直し';
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          openCropModal({ pageNum, replaceFilename: filename });
+        });
+        wrap.appendChild(btn);
+      });
+    }
+
+    function renderPagesStrip() {
+      const section = document.getElementById('pages-section');
+      const strip = document.getElementById('pages-strip');
+      if (!pageAssets.length) {
+        section.classList.remove('visible');
+        strip.innerHTML = '';
+        return;
+      }
+      const sorted = pageAssets.slice().sort((a, b) => a.page_num - b.page_num);
+      strip.innerHTML = '';
+      for (const pa of sorted) {
+        const url = getAssetPreviewUrl('assets/' + pa.filename);
+        if (!url) continue;
+        const wrap = document.createElement('div');
+        wrap.className = 'page-thumb';
+        wrap.dataset.pageNum = String(pa.page_num);
+        wrap.dataset.filename = pa.filename;
+        wrap.title = 'クリックで手動切り出し';
+        wrap.addEventListener('click', () => openCropModal({ pageNum: pa.page_num }));
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = 'page ' + pa.page_num;
+        const label = document.createElement('div');
+        label.className = 'page-thumb-label';
+        label.textContent = 'p.' + pa.page_num;
+        const cropBtn = document.createElement('button');
+        cropBtn.type = 'button';
+        cropBtn.className = 'page-thumb-crop';
+        cropBtn.textContent = '✂';
+        cropBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openCropModal({ pageNum: pa.page_num });
+        });
+        wrap.appendChild(img);
+        wrap.appendChild(label);
+        wrap.appendChild(cropBtn);
+        strip.appendChild(wrap);
+      }
+      section.classList.add('visible');
+    }
+
+    // Load available VL models from all providers
+    async function loadModels() {
+      const sel = document.getElementById('model');
+      try {
+        const res = await fetch(apiUrl('/api/pdf2md/models'));
+        const data = await res.json();
+        sel.innerHTML = '';
+        data.models.forEach(m => {
+          const opt = document.createElement('option');
+          const name = typeof m === 'object' ? m.name : m;
+          const prov = typeof m === 'object' ? m.provider : 'ollama';
+          opt.value = name;
+          opt.dataset.provider = prov;
+          opt.textContent = name + ' (' + prov + ')';
+          if (name === data.default) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      } catch {
+        sel.innerHTML = '<option value="qwen2.5vl:32b" data-provider="ollama">qwen2.5vl:32b (ollama)</option>';
+      }
+    }
+    loadModels();
+
+    async function startConvert() {
+      const fileInput = document.getElementById('pdf-file');
+      const file = fileInput.files[0];
+      if (!file) { alert('Select a PDF file'); return; }
+
+      const lang = document.getElementById('lang').value;
+      const modelSel = document.getElementById('model');
+      const model = modelSel.value;
+      const provider = modelSel.selectedOptions[0]?.dataset.provider || 'ollama';
+      const dpi = document.getElementById('dpi').value;
+      const pages = document.getElementById('pages').value.trim();
+      const thinking = document.getElementById('thinking').checked ? 'on' : 'off';
+      const extractFigures = document.querySelector('input[name="figures"]:checked').value;
+      const tablesMode = document.querySelector('input[name="tables"]:checked').value;
+      const tableAlsoImage = document.getElementById('table-also-image').checked ? 'on' : 'off';
+      const btn = document.getElementById('convert-btn');
+      const progress = document.getElementById('progress');
+      const progressText = document.getElementById('progress-text');
+      const progressFill = document.getElementById('progress-fill');
+      const output = document.getElementById('output');
+
+      btn.disabled = true;
+      progress.style.display = 'block';
+      output.style.display = 'none';
+      progressFill.style.width = '0%';
+      progressText.textContent = 'Uploading...';
+      resultText = '';
+      revokeAssetUrls();
+      resultAssets = new Map();
+      pageAssets = [];
+      renderResult();
+      renderPagesStrip();
+      setOutputMode('preview');
+
+      const formData = new FormData();
+      formData.append('pdf', file);
+      formData.append('lang', lang);
+      formData.append('model', model);
+      formData.append('provider', provider);
+      formData.append('dpi', dpi);
+      formData.append('thinking', thinking);
+      formData.append('extract_figures', extractFigures);
+      formData.append('tables', tablesMode);
+      formData.append('table_also_image', tableAlsoImage);
+      if (pages) formData.append('pages', pages);
+
+      try {
+        const res = await fetch(apiUrl('/api/pdf2md/convert'), {
+          method: 'POST',
+          body: formData,
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let totalPages = 0;
+        let pageResults = [];
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            let data;
+            try { data = JSON.parse(line.slice(6)); } catch { continue; }
+
+            if (data.type === 'start') {
+              totalPages = data.total_pages;
+              progressText.textContent = `0 / ${totalPages} pages`;
+            } else if (data.type === 'asset') {
+              resultAssets.set(data.filename, b64ToBytes(data.data));
+            } else if (data.type === 'page') {
+              const label = data.page_label ? `[p.${data.page_label}]` : '';
+              pageResults.push({ label, content: data.content });
+              for (const a of (data.assets || [])) {
+                if (a.kind === 'page' && a.filename) {
+                  pageAssets.push({
+                    page_num: a.page_num || data.page_label || data.page,
+                    filename: a.filename,
+                    width: a.width,
+                    height: a.height,
+                  });
+                }
+              }
+              renderPagesStrip();
+              const pct = (data.page / totalPages * 100).toFixed(0);
+              progressFill.style.width = pct + '%';
+              if (data.metrics) {
+                const sizeKb = Math.round((data.metrics.image_bytes || 0) / 1024);
+                const totalMs = data.metrics.total_ms || data.metrics.ollama_ms || 0;
+                const effectiveDpi = data.metrics.effective_dpi || data.metrics.requested_dpi;
+                const assetCount = (data.assets || []).length;
+                const assetStr = assetCount ? `, ${assetCount} asset${assetCount > 1 ? 's' : ''}` : '';
+                progressText.textContent = `${data.page} / ${totalPages} pages (${effectiveDpi}dpi, ${sizeKb}KB, ${(totalMs / 1000).toFixed(1)}s${assetStr})`;
+              } else {
+                progressText.textContent = `${data.page} / ${totalPages} pages`;
+              }
+            } else if (data.type === 'done') {
+              progressText.textContent = 'Done!';
+              progressFill.style.width = '100%';
+            }
+          }
+        }
+
+        const separator = '\n\n---\n\n';
+        resultText = pageResults.map(p => p.content).join(separator);
+        renderResult();
+        output.style.display = 'block';
+      } catch (e) {
+        progressText.textContent = 'Error: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function copyResult() {
+      const ta = document.createElement('textarea');
+      ta.value = resultText;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+
+    function buildManifest() {
+      const pages = pageAssets
+        .slice()
+        .sort((a, b) => a.page_num - b.page_num)
+        .map(pa => ({
+          page_num: pa.page_num,
+          page_image: pa.filename,
+          width: pa.width || null,
+          height: pa.height || null,
+        }));
+      const pageFilenames = new Set(pages.map(p => p.page_image));
+      const assets = [];
+      for (const name of resultAssets.keys()) {
+        if (pageFilenames.has(name)) continue;
+        const m = name.match(/^p(\d+)-(figure|table)(\d+)\.png$/);
+        assets.push({
+          filename: name,
+          kind: m ? m[2] : 'unknown',
+          page_num: m ? parseInt(m[1], 10) : null,
+        });
+      }
+      return { version: 1, pages, assets };
+    }
+
+    async function downloadResult() {
+      if (resultAssets.size === 0 || typeof JSZip === 'undefined') {
+        const blob = new Blob([resultText], { type: 'text/markdown' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'converted.md';
+        a.click();
+        URL.revokeObjectURL(a.href);
+        return;
+      }
+      const zip = new JSZip();
+      zip.file('output.md', resultText);
+      zip.file('manifest.json', JSON.stringify(buildManifest(), null, 2));
+      const assetsDir = zip.folder('assets');
+      for (const [name, bytes] of resultAssets) {
+        assetsDir.file(name, bytes);
+      }
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'converted.zip';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    async function loadZip(event) {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = '';
+      if (!file) return;
+      if (typeof JSZip === 'undefined') {
+        alert('JSZip が読み込めませんでした');
+        return;
+      }
+      try {
+        const zip = await JSZip.loadAsync(file);
+        const mdFile = zip.file('output.md');
+        if (!mdFile) throw new Error('output.md が見つかりません');
+        const md = await mdFile.async('string');
+
+        let manifest = null;
+        const manifestFile = zip.file('manifest.json');
+        if (manifestFile) {
+          try {
+            manifest = JSON.parse(await manifestFile.async('string'));
+          } catch (e) {
+            console.warn('manifest.json parse failed', e);
+          }
+        }
+
+        const newAssets = new Map();
+        const assetFiles = zip.folder('assets');
+        if (assetFiles) {
+          const entries = [];
+          zip.forEach((path, entry) => {
+            if (path.startsWith('assets/') && !entry.dir) entries.push(entry);
+          });
+          for (const entry of entries) {
+            const bytes = await entry.async('uint8array');
+            const name = entry.name.replace(/^assets\//, '');
+            newAssets.set(name, bytes);
+          }
+        }
+
+        revokeAssetUrls();
+        resultAssets = newAssets;
+        resultText = md;
+
+        pageAssets = [];
+        if (manifest && Array.isArray(manifest.pages)) {
+          for (const p of manifest.pages) {
+            if (!p.page_image || !resultAssets.has(p.page_image)) continue;
+            pageAssets.push({
+              page_num: p.page_num,
+              filename: p.page_image,
+              width: p.width || null,
+              height: p.height || null,
+            });
+          }
+        } else {
+          for (const name of resultAssets.keys()) {
+            const m = name.match(/^p(\d+)-page\.(jpg|jpeg|png)$/i);
+            if (m) pageAssets.push({ page_num: parseInt(m[1], 10), filename: name });
+          }
+        }
+
+        document.getElementById('output').style.display = 'block';
+        renderResult();
+        renderPagesStrip();
+        setOutputMode('preview');
+        const progress = document.getElementById('progress');
+        const progressText = document.getElementById('progress-text');
+        const progressFill = document.getElementById('progress-fill');
+        progress.style.display = 'block';
+        progressText.textContent = `Loaded ZIP: ${resultAssets.size} assets, ${pageAssets.length} pages`;
+        progressFill.style.width = '100%';
+      } catch (e) {
+        alert('ZIP 読み込み失敗: ' + e.message);
+      }
+    }
+
+    setOutputMode('preview');
+
+    // ===== Manual crop modal =====
+    const cropState = {
+      pageNum: null,
+      replaceFilename: null,
+      image: null,
+      scale: 1,
+      dragging: false,
+      startX: 0,
+      startY: 0,
+      rect: null,
+    };
+
+    function nextAssetFilename(pageNum, kind) {
+      let i = 1;
+      while (resultAssets.has(`p${pageNum}-${kind}${i}.png`)) i++;
+      return `p${pageNum}-${kind}${i}.png`;
+    }
+
+    function updateNewFilename() {
+      if (cropState.replaceFilename) return;
+      if (cropState.pageNum == null) return;
+      const kind = document.querySelector('input[name="crop-kind"]:checked').value;
+      document.getElementById('crop-filename').value = nextAssetFilename(cropState.pageNum, kind);
+    }
+
+    function updateRectInfo() {
+      const info = document.getElementById('crop-rect-info');
+      const saveBtn = document.getElementById('crop-save-btn');
+      if (!cropState.rect || !cropState.image) {
+        info.textContent = '未選択';
+        saveBtn.disabled = true;
+        return;
+      }
+      const r = cropState.rect;
+      const s = cropState.scale;
+      const x = Math.round(r.x / s);
+      const y = Math.round(r.y / s);
+      const w = Math.round(r.w / s);
+      const h = Math.round(r.h / s);
+      info.textContent = `${x},${y} → ${x + w},${y + h} (${w} × ${h})`;
+      saveBtn.disabled = w < 10 || h < 10;
+    }
+
+    function redrawCropCanvas() {
+      const canvas = document.getElementById('crop-canvas');
+      if (!cropState.image || !canvas.width) return;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(cropState.image, 0, 0, canvas.width, canvas.height);
+      if (cropState.rect) {
+        const r = cropState.rect;
+        ctx.save();
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.22)';
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+        ctx.setLineDash([6, 4]);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#60a5fa';
+        ctx.strokeRect(r.x, r.y, r.w, r.h);
+        ctx.restore();
+      }
+    }
+
+    function openCropModal({ pageNum, replaceFilename = null }) {
+      const pageFilename = `p${pageNum}-page.jpg`;
+      const pageUrl = getAssetPreviewUrl('assets/' + pageFilename);
+      if (!pageUrl) { alert('ページ画像が見つかりません: ' + pageFilename); return; }
+
+      cropState.pageNum = pageNum;
+      cropState.replaceFilename = replaceFilename;
+      cropState.rect = null;
+      cropState.dragging = false;
+      cropState.image = null;
+
+      const img = new Image();
+      img.onload = () => {
+        cropState.image = img;
+        const canvas = document.getElementById('crop-canvas');
+        const maxW = Math.max(400, window.innerWidth - 420);
+        const maxH = Math.max(400, window.innerHeight - 220);
+        const scale = Math.min(maxW / img.width, maxH / img.height, 1);
+        cropState.scale = scale;
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        redrawCropCanvas();
+        updateRectInfo();
+      };
+      img.src = pageUrl;
+
+      const modeLabel = document.getElementById('crop-mode-label');
+      const filenameInput = document.getElementById('crop-filename');
+      const kindField = document.getElementById('crop-kind-field');
+      const captionInput = document.getElementById('crop-caption');
+      captionInput.value = '';
+      if (replaceFilename) {
+        modeLabel.textContent = `置換: ${replaceFilename}（p.${pageNum}）`;
+        filenameInput.value = replaceFilename;
+        kindField.style.display = 'none';
+      } else {
+        modeLabel.textContent = `新規追加（p.${pageNum}）`;
+        kindField.style.display = '';
+        const figRadio = document.getElementById('crop-kind-figure');
+        figRadio.checked = true;
+        updateNewFilename();
+      }
+
+      document.getElementById('crop-save-btn').disabled = true;
+      document.getElementById('crop-modal').classList.add('visible');
+    }
+
+    function closeCropModal() {
+      document.getElementById('crop-modal').classList.remove('visible');
+      cropState.image = null;
+      cropState.rect = null;
+      cropState.dragging = false;
+    }
+
+    async function performCrop() {
+      if (!cropState.rect || !cropState.image) return;
+      const s = cropState.scale;
+      const r = cropState.rect;
+      const sx = Math.max(0, Math.round(r.x / s));
+      const sy = Math.max(0, Math.round(r.y / s));
+      const sw = Math.round(r.w / s);
+      const sh = Math.round(r.h / s);
+      if (sw < 5 || sh < 5) return;
+      const out = document.createElement('canvas');
+      out.width = sw;
+      out.height = sh;
+      out.getContext('2d').drawImage(cropState.image, sx, sy, sw, sh, 0, 0, sw, sh);
+      const blob = await new Promise(resolve => out.toBlob(resolve, 'image/png'));
+      if (!blob) return;
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const filename = document.getElementById('crop-filename').value.trim();
+      if (!filename) return;
+      const isReplace = !!cropState.replaceFilename;
+      const caption = document.getElementById('crop-caption').value.trim();
+      const pageNum = cropState.pageNum;
+
+      revokeAssetUrl(filename);
+      resultAssets.set(filename, bytes);
+
+      if (!isReplace) {
+        const captionSafe = caption.replace(/[\]\[|]/g, '').trim();
+        const insert = `\n\n<!-- manual crop: p.${pageNum} -->\n![${captionSafe}](assets/${filename})\n`;
+        resultText = resultText + insert;
+      }
+
+      renderResult();
+      closeCropModal();
+    }
+
+    // Canvas drag handlers (set once)
+    (function setupCropCanvas() {
+      const canvas = document.getElementById('crop-canvas');
+      const getPoint = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: Math.max(0, Math.min(canvas.width, e.clientX - rect.left)),
+          y: Math.max(0, Math.min(canvas.height, e.clientY - rect.top)),
+        };
+      };
+      canvas.addEventListener('mousedown', (e) => {
+        if (!cropState.image) return;
+        const p = getPoint(e);
+        cropState.dragging = true;
+        cropState.startX = p.x;
+        cropState.startY = p.y;
+        cropState.rect = { x: p.x, y: p.y, w: 0, h: 0 };
+        redrawCropCanvas();
+        updateRectInfo();
+      });
+      canvas.addEventListener('mousemove', (e) => {
+        if (!cropState.dragging) return;
+        const p = getPoint(e);
+        cropState.rect = {
+          x: Math.min(cropState.startX, p.x),
+          y: Math.min(cropState.startY, p.y),
+          w: Math.abs(p.x - cropState.startX),
+          h: Math.abs(p.y - cropState.startY),
+        };
+        redrawCropCanvas();
+        updateRectInfo();
+      });
+      const endDrag = () => { cropState.dragging = false; };
+      canvas.addEventListener('mouseup', endDrag);
+      canvas.addEventListener('mouseleave', endDrag);
+
+      document.addEventListener('change', (e) => {
+        if (e.target && e.target.name === 'crop-kind') updateNewFilename();
+      });
+
+      const overlay = document.getElementById('crop-modal');
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeCropModal();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && overlay.classList.contains('visible')) {
+          closeCropModal();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
