@@ -14,8 +14,6 @@ services:
       - ./backend/app.py:/app/app.py:ro
       - ./backend/static:/app/static:ro
       - ./backend/providers:/app/providers:ro
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     logging:
       driver: "json-file"
       options:
