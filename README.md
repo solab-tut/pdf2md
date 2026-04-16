@@ -90,12 +90,16 @@ open http://localhost:3200
 | **Thinking** | on / off | Enable model reasoning (slower but may improve accuracy) |
 | **Figures** | MD only / Extract as image | `MD only`: describe figures in text. `Extract as image`: crop and embed as PNG |
 | **Tables** | MD only / Complex as image / All as image | `MD only`: all tables as Markdown pipes. `Complex as image`: simple tables as MD, complex (merged cells) as image. `All as image`: all tables as images |
-| **Also save as image** | on / off | When tables are rendered as Markdown, also save a cropped image copy |
+| **Also save as image** | on / off | When tables are rendered as Markdown, also save a cropped image copy. Automatically enabled and locked when "All as image" is selected |
+
+### Cancel
+
+Click the **Cancel** button on the progress bar to abort a running conversion. Pages already processed are preserved and displayed as partial results.
 
 ### Output
 
-- **Markdown view**: Raw Markdown source, editable
-- **Preview view**: Rendered HTML with KaTeX math formulas and inline images
+- **Markdown view** (left): Raw Markdown source, editable
+- **Preview view** (right): Rendered HTML with KaTeX math formulas and inline images
 - **Download**: ZIP archive containing:
   - `document.md` — Full Markdown
   - `assets/` — Extracted figures and tables (PNG)
