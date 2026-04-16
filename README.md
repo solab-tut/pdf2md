@@ -5,8 +5,7 @@ PDF to Markdown converter powered by Vision LLM. Converts PDF pages to structure
 ## Requirements
 
 - Docker & Docker Compose
-- NVIDIA GPU with CUDA support (for Ollama)
-- NVIDIA Container Toolkit (`nvidia-docker`)
+- A running [Ollama](https://ollama.com) instance (local or remote) with a vision model pulled, **or** an Azure OpenAI account
 
 ## Quick Start
 
@@ -15,16 +14,13 @@ PDF to Markdown converter powered by Vision LLM. Converts PDF pages to structure
 git clone git@github.com:solab-tut/pdf2md.git
 cd pdf2md
 
-# 2. Create .env from template
+# 2. Create .env from template and set OLLAMA_URL to your Ollama instance
 cp .env.example .env
 
 # 3. Start services
 docker compose up -d
 
-# 4. Pull the vision model (first time only, ~21GB)
-docker compose exec ollama ollama pull qwen2.5vl:32b
-
-# 5. Open in browser
+# 4. Open in browser
 open http://localhost:3200
 ```
 
@@ -54,11 +50,10 @@ open http://localhost:3200
 │  └──────────┬───────────┬────────────┘  │
 └─────────────┼───────────┼───────────────┘
               │           │
-   ┌──────────┴──┐   ┌────┴──────────────┐
-   │ pdf2md-     │   │ Azure OpenAI      │
-   │ ollama      │   │ (optional)        │
-   │ port 3201   │   └───────────────────┘
-   └─────────────┘
+   ┌──────────┴──────┐ ┌──┴────────────────┐
+   │ Ollama          │ │ Azure OpenAI      │
+   │ (external)      │ │ (optional)        │
+   └─────────────────┘ └───────────────────┘
 ```
 
 ### Services
@@ -66,7 +61,6 @@ open http://localhost:3200
 | Container | Port | Description |
 |---|---|---|
 | `pdf2md` | 3200 | Web UI + API server (Flask) |
-| `pdf2md-ollama` | 3201 | Local LLM server (Ollama, GPU) |
 
 ## Usage
 
@@ -121,8 +115,8 @@ Copy `.env.example` to `.env` and adjust as needed:
 
 ```bash
 # Local LLM
-OLLAMA_URL=http://ollama:11434      # Ollama endpoint (container name)
-PDF2MD_MODEL=qwen2.5vl:32b          # Default model
+OLLAMA_URL=http://host.docker.external:11434  # Ollama endpoint (external instance)
+PDF2MD_MODEL=qwen2.5vl:32b                    # Default model
 
 # Image processing
 PDF2MD_DEFAULT_DPI=150               # Default page rasterization DPI
@@ -137,22 +131,6 @@ PDF2MD_OLLAMA_KEEP_ALIVE=15m         # Model keep-alive duration
 PDF2MD_OLLAMA_TIMEOUT=600            # HTTP timeout in seconds
 PDF2MD_DEFAULT_THINKING=off          # Default thinking mode (on/off)
 ```
-
-### GPU Configuration
-
-By default, GPU device `1` is used. To change this, edit `docker-compose.yml`:
-
-```yaml
-deploy:
-  resources:
-    reservations:
-      devices:
-        - driver: nvidia
-          device_ids: ['0']    # Change to your GPU ID
-          capabilities: [gpu]
-```
-
-To check available GPUs: `nvidia-smi`
 
 ### Azure OpenAI (Optional)
 
