@@ -197,6 +197,7 @@ DEFAULT_DPI = int(os.environ.get("PDF2MD_DEFAULT_DPI", "150"))
 DEFAULT_THINKING = os.environ.get("PDF2MD_DEFAULT_THINKING", "off") == "on"
 MAX_IMAGE_EDGE = int(os.environ.get("PDF2MD_MAX_IMAGE_EDGE", "1800"))
 OLLAMA_TIMEOUT = int(os.environ.get("PDF2MD_OLLAMA_TIMEOUT", "600"))
+OLLAMA_LOAD_TIMEOUT = int(os.environ.get("PDF2MD_OLLAMA_LOAD_TIMEOUT", "300"))
 OLLAMA_KEEP_ALIVE = os.environ.get("PDF2MD_OLLAMA_KEEP_ALIVE", "15m")
 GRID_COLS = int(os.environ.get("PDF2MD_GRID_COLS", "20"))
 GRID_ROWS = int(os.environ.get("PDF2MD_GRID_ROWS", "26"))
@@ -1315,6 +1316,7 @@ def convert():
         convert_pages = len(page_indices)
         yield f"data: {json.dumps({'type': 'start', 'total_pages': convert_pages, 'format': OUTPUT_FORMAT})}\n\n"
 
+        model_load_checked = False
         prev_tail = ""
         debug_job_dir = None
         debug_job_id = None
@@ -1367,6 +1369,16 @@ def convert():
                 }
 
                 try:
+                    call_timeout = OLLAMA_TIMEOUT
+                    if not model_load_checked:
+                        model_load_checked = True
+                        if hasattr(provider, "is_model_loaded") and not provider.is_model_loaded(model):
+                            call_timeout = OLLAMA_TIMEOUT + OLLAMA_LOAD_TIMEOUT
+                            print(
+                                f"[pdf2md] page {page_num}: model not loaded, using extended timeout {call_timeout}s",
+                                file=sys.stderr,
+                                flush=True,
+                            )
                     llm_started = time.perf_counter()
                     result = provider.chat(
                         model,
@@ -1378,7 +1390,7 @@ def convert():
                         thinking=thinking,
                         keep_alive=OLLAMA_KEEP_ALIVE,
                         options={"num_predict": MAX_TOKENS, "temperature": 0.1},
-                        timeout=OLLAMA_TIMEOUT,
+                        timeout=call_timeout,
                     )
                     metrics.update(
                         {

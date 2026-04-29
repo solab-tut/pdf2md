@@ -52,6 +52,15 @@ class OllamaProvider(LLMProvider):
             "total_duration": data.get("total_duration"),
         }
 
+    def is_model_loaded(self, model: str) -> bool:
+        try:
+            resp = self._http.get(f"{self._url}/api/ps", timeout=5)
+            resp.raise_for_status()
+            loaded = [m["name"] for m in resp.json().get("models", [])]
+            return model in loaded
+        except Exception:
+            return False
+
     def list_models(self) -> list[dict]:
         resp = self._http.get(f"{self._url}/api/tags", timeout=10)
         resp.raise_for_status()
