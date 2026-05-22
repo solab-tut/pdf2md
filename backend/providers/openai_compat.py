@@ -91,16 +91,24 @@ class OpenAICompatProvider(LLMProvider):
             resp = self._http.get(f"{self._base_url}/v1/models", timeout=10)
             resp.raise_for_status()
             ids = [m["id"] for m in resp.json().get("data", [])]
-            vision = [m for m in ids if self.model_has_vision(m)]
-            if vision:
-                return [{"name": m, "provider": "openai"} for m in vision]
+            if self._models:
+                # Show only explicitly configured models that exist in the API
+                available = set(ids)
+                result = [m for m in self._models if m in available]
+            else:
+                # Show all models except obviously non-LLM ones
+                result = [m for m in ids if not self._is_non_llm(m)]
+            if result:
+                return [{"name": m, "provider": "openai"} for m in result]
         except Exception:
             pass
         return [{"name": m, "provider": "openai"} for m in self._models]
 
+    @staticmethod
+    def _is_non_llm(name: str) -> bool:
+        exclude = ("embed", "whisper", "tts", "dall-e", "moderation")
+        n = name.lower()
+        return any(p in n for p in exclude)
+
     def model_has_vision(self, name: str) -> bool:
-        vision_patterns = (
-            "gpt-4o", "gpt-4-turbo", "gpt-4v", "gpt-4.1",
-            "llava", "vision", "vl", "minicpm-v",
-        )
-        return any(p in name.lower() for p in vision_patterns)
+        return True
