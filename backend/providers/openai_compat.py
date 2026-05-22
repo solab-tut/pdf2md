@@ -87,6 +87,15 @@ class OpenAICompatProvider(LLMProvider):
         }
 
     def list_models(self) -> list[dict]:
+        try:
+            resp = self._http.get(f"{self._base_url}/v1/models", timeout=10)
+            resp.raise_for_status()
+            ids = [m["id"] for m in resp.json().get("data", [])]
+            vision = [m for m in ids if self.model_has_vision(m)]
+            if vision:
+                return [{"name": m, "provider": "openai"} for m in vision]
+        except Exception:
+            pass
         return [{"name": m, "provider": "openai"} for m in self._models]
 
     def model_has_vision(self, name: str) -> bool:

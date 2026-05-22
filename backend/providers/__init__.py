@@ -36,7 +36,7 @@ def _init_providers():
     openai_base_url = os.environ.get("OPENAI_BASE_URL", "").strip()
     openai_api_key = os.environ.get("OPENAI_API_KEY", "").strip()
     openai_models = os.environ.get("OPENAI_MODELS", "").strip()
-    if openai_base_url and openai_models:
+    if openai_base_url:
         from providers.openai_compat import OpenAICompatProvider
 
         _providers["openai"] = OpenAICompatProvider(
